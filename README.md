@@ -63,6 +63,16 @@ This project uses Python version-specific dependency files to ensure compatibili
 
 The CI/CD pipeline automatically selects the appropriate dependency file based on the Python version being tested.
 
+### Python Version Compatibility
+
+Some dependencies have specific version requirements based on Python version support:
+
+- **pytest-postgresql**: 
+  - Python 3.9/3.10: `>=6.0.0,<7.0.0` (stable 6.x series)
+  - Python 3.11+: `>=7.0.0` (latest 7.x series with Python 3.11+ support)
+
+This ensures that all dependencies work correctly across the supported Python versions without compatibility issues.
+
 ## 🔐 Security
 
 This project includes comprehensive security scanning:

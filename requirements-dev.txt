@@ -39,9 +39,9 @@ line-profiler==4.1.2
 py-spy==0.3.14
 
 # Database Testing
-pytest-postgresql==4.1.4
-pytest-redis==4.1.0
-factory-boy==3.3.0
+pytest-postgresql>=6.0.0,<7.0.0
+pytest-redis>=4.1.0
+factory-boy>=3.3.0
 
 # Mock & Fixtures
 responses==0.24.1
