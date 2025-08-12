@@ -1,3 +1,4 @@
+-i https://pkgs.safetycli.com/repository/seoultech/project/github-actions-project/pypi/simple/
 # Development dependencies for DevOps Demo Application
 # This file contains tools for development, testing, and code quality
 
@@ -18,7 +19,7 @@ pylint>=3.0.0,<4.0.0
 
 # Security Tools
 bandit>=1.7.0,<2.0.0
-safety>=2.3.0,<3.0.0
+safety>=2.3.0,<4.0.0
 pip-audit>=2.6.0,<3.0.0
 
 # Documentation
