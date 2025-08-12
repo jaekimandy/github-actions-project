@@ -205,5 +205,14 @@ if __name__ == '__main__':
     # Configure logging
     logging.basicConfig(level=logging.INFO)
     
+    # Security: Never run in debug mode in production
+    debug_mode = app.config.get('DEBUG', False)
+    if os.getenv('FLASK_ENV') == 'production' and debug_mode:
+        logger.warning("Debug mode disabled in production environment")
+        debug_mode = False
+    
+    # Security: Use localhost in development, configurable in production
+    host = '127.0.0.1' if debug_mode else app.config.get('HOST', '127.0.0.1')
+    
     # Run the application
-    app.run(host='0.0.0.0', port=8000, debug=app.config.get('DEBUG', False)) 
+    app.run(host=host, port=8000, debug=debug_mode) 

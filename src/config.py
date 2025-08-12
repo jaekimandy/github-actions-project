@@ -72,9 +72,17 @@ class SecurityConfig:
     @classmethod
     def from_env(cls) -> 'SecurityConfig':
         """Create security config from environment variables"""
+        secret_key = os.getenv('SECRET_KEY')
+        jwt_secret = os.getenv('JWT_SECRET')
+        
+        if not secret_key:
+            raise ValueError("SECRET_KEY environment variable must be set")
+        if not jwt_secret:
+            raise ValueError("JWT_SECRET environment variable must be set")
+            
         return cls(
-            secret_key=os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production'),
-            jwt_secret=os.getenv('JWT_SECRET', 'jwt-secret-key-change-in-production'),
+            secret_key=secret_key,
+            jwt_secret=jwt_secret,
             bcrypt_rounds=int(os.getenv('BCRYPT_ROUNDS', '12')),
             session_timeout=int(os.getenv('SESSION_TIMEOUT', '3600')),
             max_login_attempts=int(os.getenv('MAX_LOGIN_ATTEMPTS', '5')),
@@ -133,7 +141,7 @@ class AppConfig:
     """Main application configuration"""
     debug: bool = False
     testing: bool = False
-    host: str = '0.0.0.0'
+    host: str = '127.0.0.1'
     port: int = 8000
     workers: int = 4
     timeout: int = 30
@@ -144,7 +152,7 @@ class AppConfig:
         return cls(
             debug=os.getenv('DEBUG', 'false').lower() == 'true',
             testing=os.getenv('TESTING', 'false').lower() == 'true',
-            host=os.getenv('HOST', '0.0.0.0'),
+            host=os.getenv('HOST', '127.0.0.1'),
             port=int(os.getenv('PORT', '8000')),
             workers=int(os.getenv('WORKERS', '4')),
             timeout=int(os.getenv('TIMEOUT', '30'))
@@ -251,11 +259,11 @@ class Config:
         """Validate configuration settings"""
         try:
             # Validate required fields
-            if not self.security.secret_key or self.security.secret_key == 'dev-secret-key-change-in-production':
-                raise ValueError("SECRET_KEY must be set and changed from default")
+            if not self.security.secret_key:
+                raise ValueError("SECRET_KEY must be set")
             
-            if not self.security.jwt_secret or self.security.jwt_secret == 'jwt-secret-key-change-in-production':
-                raise ValueError("JWT_SECRET must be set and changed from default")
+            if not self.security.jwt_secret:
+                raise ValueError("JWT_SECRET must be set")
             
             # Validate port ranges
             if not (1 <= self.app.port <= 65535):
