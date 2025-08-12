@@ -99,7 +99,7 @@ jobs:
           pip install safety bandit black isort mypy
 
       - name: Run safety check
-        run: safety check --json --output json > safety-report.json
+        run: safety.exe scan --output json --save-as json safety-report.json
 
       - name: Run bandit security linter
         run: bandit -r src/ -f json -o bandit-report.json
