@@ -40,7 +40,7 @@ py-spy==0.3.14
 
 # Database Testing
 pytest-postgresql>=6.0.0,<7.0.0
-pytest-redis>=4.1.0
+pytest-redis>=3.0.0
 factory-boy>=3.3.0
 
 # Mock & Fixtures
