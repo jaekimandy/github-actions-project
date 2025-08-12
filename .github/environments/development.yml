@@ -1,0 +1,15 @@
+name: development
+url: https://dev.example.com
+protection_rules:
+  - required_reviewers:
+      users: [dev-team-lead]
+      teams: [developers]
+  - wait_timer:
+      minutes: 1
+  - required_status_checks:
+      strict: true
+      contexts:
+        - "Security Scan"
+        - "Quality Gates"
+        - "Infrastructure Validation"
+        - "Container Build" 

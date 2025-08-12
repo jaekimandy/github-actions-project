@@ -1,0 +1,19 @@
+name: staging
+url: https://staging.example.com
+protection_rules:
+  - required_reviewers:
+      users: [qa-lead, devops-lead]
+      teams: [qa-team, devops-team]
+  - wait_timer:
+      minutes: 5
+  - required_status_checks:
+      strict: true
+      contexts:
+        - "Security Scan"
+        - "Quality Gates"
+        - "Infrastructure Validation"
+        - "Container Build"
+        - "Deploy Development"
+  - deployment_branch_policy:
+      protected_branches: true
+      custom_branch_policies: false 

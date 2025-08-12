@@ -1,0 +1,213 @@
+name: Deploy to Local Kubernetes
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Run tests
+      run: |
+        python -m pytest tests/ -v --cov=src --cov-report=html
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./htmlcov/coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy-to-local-k8s:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    - name: Configure kubectl for Docker Desktop
+      run: |
+        # Create kubeconfig for Docker Desktop
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.DOCKER_DESKTOP_KUBECONFIG }}" > $HOME/.kube/config
+        chmod 600 $HOME/.kube/config
+
+    - name: Create namespace if it doesn't exist
+      run: |
+        kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Create ConfigMap
+      run: |
+        kubectl create configmap app-config \
+          --from-literal=FLASK_ENV=production \
+          --from-literal=LOG_LEVEL=INFO \
+          --from-literal=HOST=0.0.0.0 \
+          --from-literal=PORT=8000 \
+          --namespace=production \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Create Secret
+      run: |
+        kubectl create secret generic app-secrets \
+          --from-literal=SECRET_KEY=${{ secrets.SECRET_KEY }} \
+          --from-literal=DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+          --namespace=production \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Create Service Account
+      run: |
+        kubectl create serviceaccount devops-demo-sa \
+          --namespace=production \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Get the latest image tag
+        IMAGE_TAG="${{ github.sha }}"
+        
+        # Update the deployment with the new image
+        kubectl set image deployment/devops-demo-app \
+          app=ghcr.io/${{ github.repository }}:${{ github.sha }} \
+          --namespace=production
+        
+        # Apply the full deployment configuration
+        envsubst < k8s/production/deployment.yaml | kubectl apply -f -
+
+    - name: Wait for deployment to be ready
+      run: |
+        kubectl rollout status deployment/devops-demo-app --namespace=production --timeout=300s
+
+    - name: Create Service
+      run: |
+        kubectl create service clusterip devops-demo-service \
+          --tcp=8000:8000 \
+          --selector=app=devops-demo \
+          --namespace=production \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Create Ingress (if using nginx-ingress)
+      run: |
+        # Check if nginx-ingress is available
+        if kubectl get namespace ingress-nginx >/dev/null 2>&1; then
+          cat <<EOF | kubectl apply -f -
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: devops-demo-ingress
+            namespace: production
+            annotations:
+              nginx.ingress.kubernetes.io/rewrite-target: /
+          spec:
+            ingressClassName: nginx
+            rules:
+            - host: localhost
+              http:
+                paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: devops-demo-service
+                      port:
+                        number: 8000
+          EOF
+        else
+          echo "nginx-ingress not available, skipping Ingress creation"
+        fi
+
+    - name: Verify deployment
+      run: |
+        echo "Deployment status:"
+        kubectl get pods --namespace=production -l app=devops-demo
+        
+        echo "Service status:"
+        kubectl get services --namespace=production
+        
+        echo "Application logs:"
+        kubectl logs --namespace=production -l app=devops-demo --tail=50
+
+  notify:
+    needs: [deploy-to-local-k8s]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Notify deployment status
+      run: |
+        if [ "${{ needs.deploy-to-local-k8s.result }}" == "success" ]; then
+          echo "✅ Deployment to local Kubernetes successful!"
+          echo "🌐 Application should be available at: http://localhost:8000"
+          echo "📊 Check status with: kubectl get pods -n production"
+        else
+          echo "❌ Deployment to local Kubernetes failed!"
+          echo "🔍 Check logs with: kubectl logs -n production -l app=devops-demo"
+        fi 

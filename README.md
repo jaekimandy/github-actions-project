@@ -25,15 +25,13 @@ This project demonstrates comprehensive DevOps capabilities using GitHub Actions
 ```
 ├── .github/
 │   └── workflows/
-│       ├── ci-cd.yml          # Main CI/CD pipeline
-│       ├── security-scan.yml  # Security scanning
-│       ├── dependency-check.yml # Dependency management
-│       └── scheduled-tasks.yml # Automated maintenance
+│       ├── enterprise-deployment.yml  # Main CI/CD pipeline
+│       └── deploy-to-local-k8s.yml   # Local K8s deployment
 ├── src/                       # Application source code
-├── tests/                     # Test files
-├── infrastructure/            # Terraform and K8s manifests
-├── docker/                    # Docker configurations
-└── scripts/                   # Automation scripts
+├── infrastructure/            # Terraform configurations
+├── requirements.txt           # Python dependencies
+├── requirements-dev.txt       # Development dependencies
+└── Dockerfile                # Container configuration
 ```
 
 ## 🛠️ Technologies Used
