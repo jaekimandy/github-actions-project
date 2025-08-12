@@ -1,0 +1,73 @@
+# Development dependencies for DevOps Demo Application
+# This file contains tools for development, testing, and code quality
+
+# Testing Framework
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-asyncio==0.21.1
+pytest-html==4.1.1
+pytest-xdist==3.5.0
+
+# Code Quality & Linting
+flake8==6.1.0
+black==23.11.0
+isort==5.12.0
+mypy==1.7.1
+pylint==3.0.3
+
+# Security Tools
+bandit==1.7.5
+safety==2.3.5
+pip-audit==2.6.1
+semgrep==1.45.0
+
+# Documentation
+Sphinx==7.2.6
+sphinx-rtd-theme==1.3.0
+myst-parser==2.0.0
+
+# Development Tools
+pre-commit==3.5.0
+ipython==8.17.2
+jupyter==1.0.0
+notebook==7.0.6
+
+# Performance & Profiling
+memory-profiler==0.61.0
+line-profiler==4.1.2
+py-spy==0.3.14
+
+# Database Testing
+pytest-postgresql==4.1.4
+pytest-redis==4.1.0
+factory-boy==3.3.0
+
+# Mock & Fixtures
+responses==0.24.1
+freezegun==1.2.2
+faker==20.1.0
+
+# Coverage & Reports
+coverage==7.3.2
+pytest-html==4.1.1
+pytest-json-report==1.5.0
+
+# Type Checking
+types-requests==2.31.0.10
+types-PyYAML==6.0.12.12
+types-python-dateutil==2.8.19.14
+
+# Debugging
+ipdb==0.13.13
+debugpy==1.8.0
+
+# Build Tools
+build==1.0.3
+twine==4.0.2
+wheel==0.42.0
+
+# Dependency Management
+pip-tools==7.3.0
+pip-review==3.1.0
+pip-licenses==4.3.0 
