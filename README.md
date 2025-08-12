@@ -29,7 +29,10 @@ This project demonstrates comprehensive DevOps capabilities using GitHub Actions
 │       └── deploy-to-local-k8s.yml   # Local K8s deployment
 ├── src/                       # Application source code
 ├── infrastructure/            # Terraform configurations
-├── requirements.txt           # Python dependencies
+├── requirements.txt           # Base Python dependencies
+├── requirements-py39.txt      # Python 3.9 compatible dependencies
+├── requirements-py310.txt     # Python 3.10 compatible dependencies
+├── requirements-py311.txt     # Python 3.11 compatible dependencies
 ├── requirements-dev.txt       # Development dependencies
 └── Dockerfile                # Container configuration
 ```
@@ -49,6 +52,16 @@ This project demonstrates comprehensive DevOps capabilities using GitHub Actions
 2. Enable GitHub Actions in your fork
 3. Configure required secrets (see Security section)
 4. Push changes to trigger workflows
+
+## 📦 Dependency Management
+
+This project uses Python version-specific dependency files to ensure compatibility across different Python versions:
+
+- **requirements-py39.txt**: Python 3.9 compatible dependencies
+- **requirements-py310.txt**: Python 3.10 compatible dependencies  
+- **requirements-py311.txt**: Python 3.11 compatible dependencies
+
+The CI/CD pipeline automatically selects the appropriate dependency file based on the Python version being tested.
 
 ## 🔐 Security
 
