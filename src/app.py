@@ -9,17 +9,18 @@ This application demonstrates various DevOps practices including:
 - API documentation
 """
 
-import os
 import logging
+import os
 import time
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict
 
-from flask import Flask, jsonify, request, render_template
+import structlog
+from flask import Flask, jsonify, render_template, request
 from flask_caching import Cache
 from flask_restx import Api, Resource, fields
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-import structlog
+from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Histogram,
+                               generate_latest)
 
 # Configure structured logging
 structlog.configure(
