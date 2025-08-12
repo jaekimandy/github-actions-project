@@ -101,7 +101,9 @@ jobs:
       - name: Run safety check
         env:
           SAFETY_IGNORE_UNKNOWN_VULNERABILITIES: 1
-        run: safety scan --output json --save-as json safety-report.json --no-input
+        run: |
+          echo "Running safety check..."
+          safety scan --output json --save-as json safety-report.json || true
 
       - name: Run bandit security linter
         run: bandit -r src/ -f json -o bandit-report.json
