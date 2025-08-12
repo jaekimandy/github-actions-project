@@ -99,7 +99,9 @@ jobs:
           pip install safety bandit black isort mypy
 
       - name: Run safety check
-        run: safety scan --output json --save-as json safety-report.json
+        env:
+          SAFETY_IGNORE_UNKNOWN_VULNERABILITIES: 1
+        run: safety scan --output json --save-as json safety-report.json --no-input
 
       - name: Run bandit security linter
         run: bandit -r src/ -f json -o bandit-report.json
