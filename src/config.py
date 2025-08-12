@@ -327,7 +327,7 @@ class ProductionConfig(Config):
 
 
 # Configuration factory
-def get_config(environment: str = None) -> Config:
+def get_config(environment: Optional[str] = None) -> Config:
     """Get configuration based on environment"""
     if environment is None:
         environment = os.getenv("FLASK_ENV", "development")
