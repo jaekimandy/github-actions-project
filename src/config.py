@@ -84,11 +84,11 @@ class ProductionConfig(Config):
     """Production environment configuration"""
 
     DEBUG = False
-    LOG_LEVEL = 'WARNING'
-    CACHE_TYPE = 'redis'
+    LOG_LEVEL = 'WARNING'  # Default production log level
+    CACHE_TYPE = 'redis'   # Default production cache type
     SECURITY_HEADERS_ENABLED = True
     CORS_ORIGINS = ['https://devops-demo.com', 'https://www.devops-demo.com']
-    API_RATE_LIMIT = 100
+    API_RATE_LIMIT = 100   # Default production rate limit
     SESSION_TIMEOUT = 3600
     COMPRESSION_ENABLED = True
 
@@ -101,6 +101,17 @@ class ProductionConfig(Config):
     LOG_FORMAT = 'json'
     LOG_ROTATION = 'daily'
     LOG_RETENTION = 30
+
+    def __init__(self):
+        """Initialize production config with environment variables"""
+        super().__init__()
+        # Override with environment variables if set
+        if os.environ.get('LOG_LEVEL'):
+            self.LOG_LEVEL = os.environ.get('LOG_LEVEL')
+        if os.environ.get('CACHE_TYPE'):
+            self.CACHE_TYPE = os.environ.get('CACHE_TYPE')
+        if os.environ.get('API_RATE_LIMIT'):
+            self.API_RATE_LIMIT = int(os.environ.get('API_RATE_LIMIT'))
 
 
 class StagingConfig(Config):
@@ -142,7 +153,8 @@ def validate_config() -> bool:
 
     missing_vars = []
     for var in required_vars:
-        if not getattr(Config, var, None):
+        # Check if the environment variable is set, not the class attribute
+        if not os.environ.get(var):
             missing_vars.append(var)
 
     if missing_vars:

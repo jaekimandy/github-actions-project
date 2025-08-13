@@ -47,7 +47,16 @@ logger = structlog.get_logger()
 app = Flask(__name__)
 
 # Configuration
-app.config.from_object("config.Config")
+# Set basic configuration for testing
+app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
+app.config['DEBUG'] = True
+app.config['TESTING'] = False
+
+# Try to load from config module if available
+try:
+    app.config.from_object("src.config.DevelopmentConfig")
+except ImportError:
+    pass  # Use basic config if import fails
 
 # Initialize cache
 cache = Cache(app)
@@ -63,9 +72,11 @@ api = Api(
 
 # Prometheus metrics
 REQUEST_COUNT = Counter(
-    "http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"]
+    "http_requests_total", "Total HTTP requests", [
+        "method", "endpoint", "status"]
 )
-REQUEST_LATENCY = Histogram("http_request_duration_seconds", "HTTP request latency")
+REQUEST_LATENCY = Histogram(
+    "http_request_duration_seconds", "HTTP request latency")
 
 # API models for documentation
 health_model = api.model(
@@ -186,7 +197,8 @@ class MetricsAPI(Resource):
         """Get application metrics"""
         if request_times:
             avg_response_time = sum(request_times) / len(request_times)
-            requests_per_second = len(request_times) / (time.time() - start_time)
+            requests_per_second = len(
+                request_times) / (time.time() - start_time)
         else:
             avg_response_time = 0
             requests_per_second = 0
