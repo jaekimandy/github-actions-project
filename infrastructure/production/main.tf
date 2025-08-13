@@ -3,7 +3,7 @@
 
 terraform {
   required_version = ">= 1.5.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -18,7 +18,7 @@ terraform {
       version = "~> 2.0"
     }
   }
-  
+
   # Remote state configuration
   backend "s3" {
     bucket         = "devops-demo-terraform-state"
@@ -32,7 +32,7 @@ terraform {
 # Provider configuration
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = {
       Environment = var.environment
@@ -47,7 +47,7 @@ provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
   token                  = data.aws_eks_cluster_auth.cluster.token
-  
+
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
@@ -60,7 +60,7 @@ provider "helm" {
     host                   = module.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
     token                  = data.aws_eks_cluster_auth.cluster.token
-    
+
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
@@ -78,31 +78,31 @@ data "aws_eks_cluster_auth" "cluster" {
 
 # VPC and Networking
 module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
+  source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
-  
+
   name = "${var.project_name}-vpc"
   cidr = var.vpc_cidr
-  
+
   azs             = var.availability_zones
   private_subnets = var.private_subnet_cidrs
   public_subnets  = var.public_subnet_cidrs
-  
+
   enable_nat_gateway     = true
   single_nat_gateway     = false
   one_nat_gateway_per_az = true
-  
+
   enable_dns_hostnames = true
   enable_dns_support   = true
-  
+
   # VPC Flow Logs
   enable_flow_log                      = true
   create_flow_log_cloudwatch_log_group = true
   create_flow_log_cloudwatch_iam_role  = true
-  
+
   # Security Groups
   enable_vpc_endpoints = true
-  
+
   vpc_endpoint_services = [
     "ec2",
     "ec2messages",
@@ -111,7 +111,7 @@ module "vpc" {
     "logs",
     "monitoring"
   ]
-  
+
   tags = {
     Environment = var.environment
     Project     = var.project_name
@@ -122,63 +122,63 @@ module "vpc" {
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
-  
+
   cluster_name                   = "${var.project_name}-cluster"
   cluster_version                = var.kubernetes_version
   cluster_endpoint_public_access = true
-  
+
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
-  
+
   # Cluster Security Group
   cluster_security_group_additional_rules = {
     ingress_nodes_443 = {
       description                = "Node groups to cluster API"
-      protocol                  = "tcp"
-      from_port                 = 443
-      to_port                   = 443
-      type                      = "ingress"
+      protocol                   = "tcp"
+      from_port                  = 443
+      to_port                    = 443
+      type                       = "ingress"
       source_node_security_group = true
     }
   }
-  
+
   # Node Groups
   eks_managed_node_groups = {
     general = {
       desired_size = 2
       min_size     = 1
       max_size     = 5
-      
+
       instance_types = ["t3.medium", "t3.large"]
       capacity_type  = "ON_DEMAND"
-      
+
       labels = {
         Environment = var.environment
         Project     = var.project_name
         NodeGroup   = "general"
       }
-      
+
       taints = []
-      
+
       tags = {
         ExtraTag = "eks-node-group"
       }
     }
-    
+
     production = {
       desired_size = 3
       min_size     = 2
       max_size     = 10
-      
+
       instance_types = ["m5.large", "m5.xlarge"]
       capacity_type  = "ON_DEMAND"
-      
+
       labels = {
         Environment = var.environment
         Project     = var.project_name
         NodeGroup   = "production"
       }
-      
+
       taints = [
         {
           key    = "dedicated"
@@ -186,13 +186,13 @@ module "eks" {
           effect = "NO_SCHEDULE"
         }
       ]
-      
+
       tags = {
         ExtraTag = "eks-production-node-group"
       }
     }
   }
-  
+
   # Cluster Add-ons
   cluster_addons = {
     coredns = {
@@ -208,7 +208,7 @@ module "eks" {
       most_recent = true
     }
   }
-  
+
   tags = {
     Environment = var.environment
     Project     = var.project_name
@@ -219,41 +219,41 @@ module "eks" {
 module "rds" {
   source  = "terraform-aws-modules/rds/aws"
   version = "~> 6.0"
-  
+
   identifier = "${var.project_name}-db"
-  
-  engine               = "postgres"
-  engine_version       = "15.4"
-  instance_class       = "db.t3.micro"
-  allocated_storage    = 20
+
+  engine                = "postgres"
+  engine_version        = "15.4"
+  instance_class        = "db.t3.micro"
+  allocated_storage     = 20
   max_allocated_storage = 100
-  
+
   db_name  = "devops_demo"
   username = var.db_username
   port     = "5432"
-  
+
   vpc_security_group_ids = [aws_security_group.rds.id]
   subnet_ids             = module.vpc.private_subnets
-  
+
   # Backup and maintenance
   backup_retention_period = 7
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "sun:04:00-sun:05:00"
-  
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "sun:04:00-sun:05:00"
+
   # Performance Insights
-  performance_insights_enabled = true
+  performance_insights_enabled          = true
   performance_insights_retention_period = 7
-  
+
   # Monitoring
   monitoring_interval = 60
   monitoring_role_arn = aws_iam_role.rds_monitoring.arn
-  
+
   # Encryption
   storage_encrypted = true
-  
+
   # Deletion protection
   deletion_protection = true
-  
+
   tags = {
     Environment = var.environment
     Project     = var.project_name
@@ -264,25 +264,25 @@ module "rds" {
 module "elasticache" {
   source  = "terraform-aws-modules/elasticache/aws"
   version = "~> 1.0"
-  
+
   cluster_id           = "${var.project_name}-redis"
   engine               = "redis"
   node_type            = "cache.t3.micro"
   num_cache_nodes      = 1
   parameter_group_name = "default.redis7"
   port                 = 6379
-  
-  subnet_ids           = module.vpc.private_subnets
+
+  subnet_ids             = module.vpc.private_subnets
   vpc_security_group_ids = [aws_security_group.redis.id]
-  
+
   # Multi-AZ
   automatic_failover_enabled = true
-  multi_az_enabled          = true
-  
+  multi_az_enabled           = true
+
   # Backup
   snapshot_retention_limit = 7
   snapshot_window          = "02:00-03:00"
-  
+
   tags = {
     Environment = var.environment
     Project     = var.project_name
@@ -293,15 +293,15 @@ module "elasticache" {
 module "alb" {
   source  = "terraform-aws-modules/alb/aws"
   version = "~> 8.0"
-  
+
   name = "${var.project_name}-alb"
-  
+
   load_balancer_type = "application"
-  
+
   vpc_id          = module.vpc.vpc_id
   subnets         = module.vpc.public_subnets
   security_groups = [aws_security_group.alb.id]
-  
+
   # HTTPS Listener
   https_listeners = {
     https = {
@@ -312,7 +312,7 @@ module "alb" {
       target_group_index = 0
     }
   }
-  
+
   # HTTP to HTTPS redirect
   http_tcp_listeners = {
     http = {
@@ -326,7 +326,7 @@ module "alb" {
       }
     }
   }
-  
+
   # Target Groups
   target_groups = {
     app = {
@@ -334,7 +334,7 @@ module "alb" {
       backend_protocol = "HTTP"
       backend_port     = 8000
       target_type      = "ip"
-      
+
       health_check = {
         enabled             = true
         interval            = 30
@@ -348,7 +348,7 @@ module "alb" {
       }
     }
   }
-  
+
   tags = {
     Environment = var.environment
     Project     = var.project_name
@@ -359,28 +359,28 @@ module "alb" {
 resource "aws_security_group" "alb" {
   name_prefix = "${var.project_name}-alb-"
   vpc_id      = module.vpc.vpc_id
-  
+
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = {
     Name = "${var.project_name}-alb-sg"
   }
@@ -389,21 +389,21 @@ resource "aws_security_group" "alb" {
 resource "aws_security_group" "rds" {
   name_prefix = "${var.project_name}-rds-"
   vpc_id      = module.vpc.vpc_id
-  
+
   ingress {
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [module.eks.cluster_security_group_id]
   }
-  
+
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = {
     Name = "${var.project_name}-rds-sg"
   }
@@ -412,21 +412,21 @@ resource "aws_security_group" "rds" {
 resource "aws_security_group" "redis" {
   name_prefix = "${var.project_name}-redis-"
   vpc_id      = module.vpc.vpc_id
-  
+
   ingress {
     from_port       = 6379
     to_port         = 6379
     protocol        = "tcp"
     security_groups = [module.eks.cluster_security_group_id]
   }
-  
+
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = {
     Name = "${var.project_name}-redis-sg"
   }
@@ -435,7 +435,7 @@ resource "aws_security_group" "redis" {
 # IAM Roles
 resource "aws_iam_role" "rds_monitoring" {
   name = "${var.project_name}-rds-monitoring"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -459,7 +459,7 @@ resource "aws_iam_role_policy_attachment" "rds_monitoring" {
 resource "aws_cloudwatch_log_group" "app" {
   name              = "/aws/eks/${var.project_name}/application"
   retention_in_days = 30
-  
+
   tags = {
     Environment = var.environment
     Project     = var.project_name
@@ -469,7 +469,7 @@ resource "aws_cloudwatch_log_group" "app" {
 # S3 Bucket for Application Logs
 resource "aws_s3_bucket" "app_logs" {
   bucket = "${var.project_name}-app-logs-${random_string.bucket_suffix.result}"
-  
+
   tags = {
     Environment = var.project_name
     Project     = var.project_name
@@ -485,7 +485,7 @@ resource "aws_s3_bucket_versioning" "app_logs" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "app_logs" {
   bucket = aws_s3_bucket.app_logs.id
-  
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -495,21 +495,21 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "app_logs" {
 
 resource "aws_s3_bucket_lifecycle_configuration" "app_logs" {
   bucket = aws_s3_bucket.app_logs.id
-  
+
   rule {
     id     = "log_rotation"
     status = "Enabled"
-    
+
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
     }
-    
+
     transition {
       days          = 90
       storage_class = "GLACIER"
     }
-    
+
     expiration {
       days = 365
     }
@@ -572,4 +572,4 @@ output "redis_endpoint" {
 output "alb_dns_name" {
   description = "Application Load Balancer DNS name"
   value       = module.alb.lb_dns_name
-} 
+}
