@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import Any, Dict
 
 import structlog
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, request
 from flask_caching import Cache
 from flask_restx import Api, Resource, fields
 from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Histogram,
