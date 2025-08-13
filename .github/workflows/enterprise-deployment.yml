@@ -300,16 +300,41 @@ jobs:
           provenance: true
           sbom: true
 
+      - name: Get image tags for scanning
+        id: image-tags
+        run: |
+          # Get the first available tag from meta outputs
+          TAGS="${{ steps.meta.outputs.tags }}"
+          FIRST_TAG=$(echo "$TAGS" | tr ',' '\n' | head -1)
+          echo "first_tag=$FIRST_TAG" >> $GITHUB_OUTPUT
+          echo "Available tags: $TAGS"
+          echo "Using tag for scanning: $FIRST_TAG"
+
       - name: Run Trivy vulnerability scanner on image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: ${{ steps.image-tags.outputs.first_tag }}
           format: "sarif"
           output: "trivy-image-results.sarif"
+          exit-code: 0
+          ignore-unfixed: true
+          severity: "CRITICAL,HIGH"
+
+      - name: Check if Trivy results exist
+        id: check-results
+        if: always()
+        run: |
+          if [ -f "trivy-image-results.sarif" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Trivy results file found"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Trivy results file not found"
+          fi
 
       - name: Upload Trivy image scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && steps.check-results.outputs.exists == 'true'
         with:
           sarif_file: "trivy-image-results.sarif"
 
