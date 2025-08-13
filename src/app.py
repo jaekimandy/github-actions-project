@@ -47,16 +47,17 @@ logger = structlog.get_logger()
 app = Flask(__name__)
 
 # Configuration
-# Set basic configuration for testing
-app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
-app.config['DEBUG'] = True
-app.config['TESTING'] = False
-
-# Try to load from config module if available
+# Load configuration from config module
 try:
-    app.config.from_object("src.config.DevelopmentConfig")
+    from src.config import get_config
+    config_class = get_config()
+    app.config.from_object(config_class)
 except ImportError:
-    pass  # Use basic config if import fails
+    # Fallback configuration if import fails
+    app.config['SECRET_KEY'] = os.environ.get(
+        'SECRET_KEY') or 'dev-secret-key-change-in-production'
+    app.config['DEBUG'] = os.environ.get('FLASK_ENV') == 'development'
+    app.config['TESTING'] = False
 
 # Initialize cache
 cache = Cache(app)
