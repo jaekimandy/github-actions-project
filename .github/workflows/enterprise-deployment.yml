@@ -205,13 +205,19 @@ jobs:
           helm lint k8s/production/
           helm template devops-demo k8s/production/ --values k8s/production/values.yaml
 
+      - name: Install kubeval
+        run: |
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo cp kubeval /usr/local/bin
+
       - name: Kubernetes Manifest Validation
         run: |
           echo "Validating Kubernetes manifests..."
           # Validate development manifests
-          kubectl apply --dry-run=client -f k8s/development/
+          kubeval k8s/development/*.yaml
           # Validate production manifests
-          kubectl apply --dry-run=client -f k8s/production/
+          kubeval k8s/production/*.yaml
           echo "Kubernetes manifest validation completed"
 
       - name: Create Infrastructure Report
