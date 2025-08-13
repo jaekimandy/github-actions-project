@@ -1,342 +1,203 @@
 """
 Configuration management for DevOps Demo Application
-This module demonstrates configuration best practices including:
-- Environment-based configuration
-- Security considerations
-- Validation and defaults
+This module handles environment-specific configuration and secrets management
 """
 
 import os
-from dataclasses import dataclass
-from typing import Any, Dict, Optional
-
-
-@dataclass
-class DatabaseConfig:
-    """Database configuration settings"""
-
-    host: str
-    port: int
-    name: str
-    user: str
-    password: str
-    ssl_mode: str = "require"
-    pool_size: int = 10
-    max_overflow: int = 20
-
-    @classmethod
-    def from_env(cls) -> "DatabaseConfig":
-        """Create database config from environment variables"""
-        return cls(
-            host=os.getenv("DB_HOST", "localhost"),
-            port=int(os.getenv("DB_PORT", "5432")),
-            name=os.getenv("DB_NAME", "devops_demo"),
-            user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("DB_PASSWORD", ""),
-            ssl_mode=os.getenv("DB_SSL_MODE", "require"),
-            pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
-            max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
-        )
-
-
-@dataclass
-class RedisConfig:
-    """Redis configuration settings"""
-
-    host: str
-    port: int
-    password: Optional[str] = None
-    db: int = 0
-    ssl: bool = True
-
-    @classmethod
-    def from_env(cls) -> "RedisConfig":
-        """Create Redis config from environment variables"""
-        return cls(
-            host=os.getenv("REDIS_HOST", "localhost"),
-            port=int(os.getenv("REDIS_PORT", "6379")),
-            password=os.getenv("REDIS_PASSWORD"),
-            db=int(os.getenv("REDIS_DB", "0")),
-            ssl=os.getenv("REDIS_SSL", "true").lower() == "true",
-        )
-
-
-@dataclass
-class SecurityConfig:
-    """Security configuration settings"""
-
-    secret_key: str
-    jwt_secret: str
-    bcrypt_rounds: int = 12
-    session_timeout: int = 3600
-    max_login_attempts: int = 5
-    lockout_duration: int = 900
-
-    @classmethod
-    def from_env(cls) -> "SecurityConfig":
-        """Create security config from environment variables"""
-        secret_key = os.getenv("SECRET_KEY")
-        jwt_secret = os.getenv("JWT_SECRET")
-
-        if not secret_key:
-            raise ValueError("SECRET_KEY environment variable must be set")
-        if not jwt_secret:
-            raise ValueError("JWT_SECRET environment variable must be set")
-
-        return cls(
-            secret_key=secret_key,
-            jwt_secret=jwt_secret,
-            bcrypt_rounds=int(os.getenv("BCRYPT_ROUNDS", "12")),
-            session_timeout=int(os.getenv("SESSION_TIMEOUT", "3600")),
-            max_login_attempts=int(os.getenv("MAX_LOGIN_ATTEMPTS", "5")),
-            lockout_duration=int(os.getenv("LOCKOUT_DURATION", "900")),
-        )
-
-
-@dataclass
-class MonitoringConfig:
-    """Monitoring configuration settings"""
-
-    prometheus_enabled: bool = True
-    metrics_port: int = 9090
-    health_check_interval: int = 30
-    log_level: str = "INFO"
-    structured_logging: bool = True
-
-    @classmethod
-    def from_env(cls) -> "MonitoringConfig":
-        """Create monitoring config from environment variables"""
-        return cls(
-            prometheus_enabled=os.getenv("PROMETHEUS_ENABLED", "true").lower()
-            == "true",
-            metrics_port=int(os.getenv("METRICS_PORT", "9090")),
-            health_check_interval=int(os.getenv("HEALTH_CHECK_INTERVAL", "30")),
-            log_level=os.getenv("LOG_LEVEL", "INFO"),
-            structured_logging=os.getenv("STRUCTURED_LOGGING", "true").lower()
-            == "true",
-        )
-
-
-@dataclass
-class CacheConfig:
-    """Cache configuration settings"""
-
-    type: str = "redis"
-    host: str = "localhost"
-    port: int = 6379
-    password: Optional[str] = None
-    db: int = 1
-    default_timeout: int = 300
-    key_prefix: str = "devops_demo:"
-
-    @classmethod
-    def from_env(cls) -> "CacheConfig":
-        """Create cache config from environment variables"""
-        return cls(
-            type=os.getenv("CACHE_TYPE", "redis"),
-            host=os.getenv("CACHE_HOST", "localhost"),
-            port=int(os.getenv("CACHE_PORT", "6379")),
-            password=os.getenv("CACHE_PASSWORD"),
-            db=int(os.getenv("CACHE_DB", "1")),
-            default_timeout=int(os.getenv("CACHE_DEFAULT_TIMEOUT", "300")),
-            key_prefix=os.getenv("CACHE_KEY_PREFIX", "devops_demo:"),
-        )
-
-
-@dataclass
-class AppConfig:
-    """Main application configuration"""
-
-    debug: bool = False
-    testing: bool = False
-    host: str = "127.0.0.1"
-    port: int = 8000
-    workers: int = 4
-    timeout: int = 30
-
-    @classmethod
-    def from_env(cls) -> "AppConfig":
-        """Create app config from environment variables"""
-        return cls(
-            debug=os.getenv("DEBUG", "false").lower() == "true",
-            testing=os.getenv("TESTING", "false").lower() == "true",
-            host=os.getenv("HOST", "127.0.0.1"),
-            port=int(os.getenv("PORT", "8000")),
-            workers=int(os.getenv("WORKERS", "4")),
-            timeout=int(os.getenv("TIMEOUT", "30")),
-        )
+from typing import Optional
 
 
 class Config:
-    """Main configuration class that aggregates all configs"""
+    """Base configuration class"""
 
-    def __init__(self):
-        self.database = DatabaseConfig.from_env()
-        self.redis = RedisConfig.from_env()
-        self.security = SecurityConfig.from_env()
-        self.monitoring = MonitoringConfig.from_env()
-        self.cache = CacheConfig.from_env()
-        self.app = AppConfig.from_env()
+    # Basic Flask configuration
+    SECRET_KEY = os.environ.get(
+        'SECRET_KEY') or 'dev-secret-key-change-in-production'
+    DEBUG = os.environ.get('FLASK_ENV') == 'development'
 
-        # Flask-specific configuration
-        self.SECRET_KEY = self.security.secret_key
-        self.DEBUG = self.app.debug
-        self.TESTING = self.app.testing
+    # Database configuration
+    DATABASE_URL = os.environ.get('DATABASE_URL') or 'sqlite:///dev.db'
 
-        # Cache configuration
-        self.CACHE_TYPE = self.cache.type
-        self.CACHE_REDIS_HOST = self.cache.host
-        self.CACHE_REDIS_PORT = self.cache.port
-        self.CACHE_REDIS_PASSWORD = self.cache.password
-        self.CACHE_REDIS_DB = self.cache.db
-        self.CACHE_DEFAULT_TIMEOUT = self.cache.default_timeout
-        self.CACHE_KEY_PREFIX = self.cache.key_prefix
+    # Redis configuration
+    REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379'
 
-        # Database configuration
-        self.SQLALCHEMY_DATABASE_URI = (
-            f"postgresql://{self.database.user}:{self.database.password}"
-            f"@{self.database.host}:{self.database.port}/{self.database.name}"
-            f"?sslmode={self.database.ssl_mode}"
-        )
-        self.SQLALCHEMY_ENGINE_OPTIONS = {
-            "pool_size": self.database.pool_size,
-            "max_overflow": self.database.max_overflow,
-            "pool_pre_ping": True,
-            "pool_recycle": 300,
-        }
+    # Cache configuration
+    CACHE_TYPE = os.environ.get('CACHE_TYPE') or 'simple'
+    CACHE_DEFAULT_TIMEOUT = int(os.environ.get('CACHE_TTL', 300))
 
-        # Security configuration
-        self.SESSION_COOKIE_SECURE = not self.app.debug
-        self.SESSION_COOKIE_HTTPONLY = True
-        self.SESSION_COOKIE_SAMESITE = "Lax"
-        self.PERMANENT_SESSION_LIFETIME = self.security.session_timeout
+    # Logging configuration
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    LOG_FORMAT = os.environ.get('LOG_FORMAT', 'text')
 
-        # Logging configuration
-        self.LOG_LEVEL = self.monitoring.log_level
-        self.STRUCTURED_LOGGING = self.monitoring.structured_logging
+    # Security configuration
+    SECURITY_HEADERS_ENABLED = os.environ.get(
+        'SECURITY_HEADERS_ENABLED', 'true').lower() == 'true'
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
+    API_RATE_LIMIT = int(os.environ.get('API_RATE_LIMIT', 100))
 
-        # Monitoring configuration
-        self.PROMETHEUS_ENABLED = self.monitoring.prometheus_enabled
-        self.METRICS_PORT = self.monitoring.metrics_port
-        self.HEALTH_CHECK_INTERVAL = self.monitoring.health_check_interval
+    # Monitoring configuration
+    METRICS_ENABLED = os.environ.get(
+        'METRICS_ENABLED', 'true').lower() == 'true'
+    HEALTH_CHECK_INTERVAL = int(os.environ.get('HEALTH_CHECK_INTERVAL', 30))
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert configuration to dictionary (excluding sensitive data)"""
-        return {
-            "app": {
-                "debug": self.app.debug,
-                "testing": self.app.testing,
-                "host": self.app.host,
-                "port": self.app.port,
-                "workers": self.app.workers,
-                "timeout": self.app.timeout,
-            },
-            "database": {
-                "host": self.database.host,
-                "port": self.database.port,
-                "name": self.database.name,
-                "user": self.database.user,
-                "ssl_mode": self.database.ssl_mode,
-                "pool_size": self.database.pool_size,
-                "max_overflow": self.database.max_overflow,
-            },
-            "redis": {
-                "host": self.redis.host,
-                "port": self.redis.port,
-                "db": self.redis.db,
-                "ssl": self.redis.ssl,
-            },
-            "cache": {
-                "type": self.cache.type,
-                "host": self.cache.host,
-                "port": self.cache.port,
-                "db": self.cache.db,
-                "default_timeout": self.cache.default_timeout,
-                "key_prefix": self.cache.key_prefix,
-            },
-            "monitoring": {
-                "prometheus_enabled": self.monitoring.prometheus_enabled,
-                "metrics_port": self.monitoring.metrics_port,
-                "health_check_interval": self.monitoring.health_check_interval,
-                "log_level": self.monitoring.log_level,
-                "structured_logging": self.monitoring.structured_logging,
-            },
-        }
+    # Application configuration
+    APP_NAME = "DevOps Demo Application"
+    APP_VERSION = "1.0.0"
+    APP_DESCRIPTION = "A demonstration of DevOps best practices"
 
-    def validate(self) -> bool:
-        """Validate configuration settings"""
-        try:
-            # Validate required fields
-            if not self.security.secret_key:
-                raise ValueError("SECRET_KEY must be set")
+    # Session configuration
+    SESSION_TIMEOUT = int(os.environ.get('SESSION_TIMEOUT', 3600))
 
-            if not self.security.jwt_secret:
-                raise ValueError("JWT_SECRET must be set")
+    # File upload configuration
+    MAX_UPLOAD_SIZE = os.environ.get('MAX_UPLOAD_SIZE', '10MB')
 
-            # Validate port ranges
-            if not (1 <= self.app.port <= 65535):
-                raise ValueError("Port must be between 1 and 65535")
-
-            if not (1 <= self.database.port <= 65535):
-                raise ValueError("Database port must be between 1 and 65535")
-
-            if not (1 <= self.redis.port <= 65535):
-                raise ValueError("Redis port must be between 1 and 65535")
-
-            return True
-
-        except Exception as e:
-            print(f"Configuration validation failed: {e}")
-            return False
+    # Compression configuration
+    COMPRESSION_ENABLED = os.environ.get(
+        'COMPRESSION_ENABLED', 'true').lower() == 'true'
 
 
-# Environment-specific configurations
 class DevelopmentConfig(Config):
     """Development environment configuration"""
 
-    def __init__(self):
-        super().__init__()
-        self.app.debug = True
-        self.app.testing = False
-        self.monitoring.log_level = "DEBUG"
-        self.cache.type = "simple"  # Use simple cache for development
+    DEBUG = True
+    LOG_LEVEL = 'DEBUG'
+    CACHE_TYPE = 'simple'
+    DATABASE_URL = 'sqlite:///dev.db'
+    REDIS_URL = 'redis://localhost:6379'
+    CORS_ORIGINS = ['*']
+    API_RATE_LIMIT = 1000
 
 
 class TestingConfig(Config):
     """Testing environment configuration"""
 
-    def __init__(self):
-        super().__init__()
-        self.app.debug = False
-        self.app.testing = True
-        self.monitoring.log_level = "DEBUG"
-        self.cache.type = "simple"
-        self.database.name = "devops_demo_test"
+    TESTING = True
+    DEBUG = False
+    LOG_LEVEL = 'DEBUG'
+    CACHE_TYPE = 'simple'
+    DATABASE_URL = 'sqlite:///test.db'
+    REDIS_URL = 'redis://localhost:6379'
+    WTF_CSRF_ENABLED = False
 
 
 class ProductionConfig(Config):
     """Production environment configuration"""
 
-    def __init__(self):
-        super().__init__()
-        self.app.debug = False
-        self.app.testing = False
-        self.monitoring.log_level = "WARNING"
-        self.cache.type = "redis"
-        self.security.bcrypt_rounds = 14  # Higher security in production
+    DEBUG = False
+    LOG_LEVEL = 'WARNING'
+    CACHE_TYPE = 'redis'
+    SECURITY_HEADERS_ENABLED = True
+    CORS_ORIGINS = ['https://devops-demo.com', 'https://www.devops-demo.com']
+    API_RATE_LIMIT = 100
+    SESSION_TIMEOUT = 3600
+    COMPRESSION_ENABLED = True
+
+    # Production security settings
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+
+    # Production logging
+    LOG_FORMAT = 'json'
+    LOG_ROTATION = 'daily'
+    LOG_RETENTION = 30
 
 
-# Configuration factory
-def get_config(environment: Optional[str] = None) -> Config:
-    """Get configuration based on environment"""
-    if environment is None:
-        environment = os.getenv("FLASK_ENV", "development")
+class StagingConfig(Config):
+    """Staging environment configuration"""
 
-    configs = {
-        "development": DevelopmentConfig,
-        "testing": TestingConfig,
-        "production": ProductionConfig,
-    }
+    DEBUG = False
+    LOG_LEVEL = 'INFO'
+    CACHE_TYPE = 'redis'
+    SECURITY_HEADERS_ENABLED = True
+    CORS_ORIGINS = ['https://staging.devops-demo.com']
+    API_RATE_LIMIT = 500
 
-    config_class = configs.get(environment.lower(), DevelopmentConfig)
-    return config_class()
+
+# Configuration mapping
+config = {
+    'development': DevelopmentConfig,
+    'testing': TestingConfig,
+    'staging': StagingConfig,
+    'production': ProductionConfig,
+    'default': DevelopmentConfig
+}
+
+
+def get_config(config_name: Optional[str] = None) -> Config:
+    """Get configuration class based on environment"""
+    if config_name is None:
+        config_name = os.environ.get('FLASK_ENV', 'development')
+
+    return config.get(config_name, config['default'])
+
+
+def validate_config() -> bool:
+    """Validate that all required configuration is present"""
+    required_vars = [
+        'SECRET_KEY',
+        'DATABASE_URL',
+        'REDIS_URL'
+    ]
+
+    missing_vars = []
+    for var in required_vars:
+        if not getattr(Config, var, None):
+            missing_vars.append(var)
+
+    if missing_vars:
+        print(f"Missing required configuration variables: {missing_vars}")
+        return False
+
+    return True
+
+
+# Environment-specific configuration
+def get_database_config():
+    """Get database configuration based on environment"""
+    env = os.environ.get('FLASK_ENV', 'development')
+
+    if env == 'production':
+        return {
+            'pool_size': 20,
+            'max_overflow': 30,
+            'pool_timeout': 30,
+            'pool_recycle': 3600,
+            'echo': False
+        }
+    elif env == 'staging':
+        return {
+            'pool_size': 10,
+            'max_overflow': 20,
+            'pool_timeout': 30,
+            'pool_recycle': 1800,
+            'echo': False
+        }
+    else:
+        return {
+            'pool_size': 5,
+            'max_overflow': 10,
+            'pool_timeout': 30,
+            'pool_recycle': 900,
+            'echo': True
+        }
+
+
+def get_redis_config():
+    """Get Redis configuration based on environment"""
+    env = os.environ.get('FLASK_ENV', 'development')
+
+    if env == 'production':
+        return {
+            'socket_connect_timeout': 5,
+            'socket_timeout': 5,
+            'retry_on_timeout': True,
+            'health_check_interval': 30
+        }
+    else:
+        return {
+            'socket_connect_timeout': 10,
+            'socket_timeout': 10,
+            'retry_on_timeout': False,
+            'health_check_interval': 60
+        }

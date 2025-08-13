@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devops-demo-config
+  namespace: production
+  labels:
+    app: devops-demo
+    environment: production
+data:
+  FLASK_ENV: "production"
+  LOG_LEVEL: "WARNING"
+  CACHE_TYPE: "redis"
+  METRICS_ENABLED: "true"
+  HEALTH_CHECK_INTERVAL: "30"
+  API_RATE_LIMIT: "1000"
+  CORS_ORIGINS: "https://devops-demo.com,https://www.devops-demo.com"
+  SECURITY_HEADERS_ENABLED: "true"
+  SESSION_TIMEOUT: "3600"
+  MAX_UPLOAD_SIZE: "10MB"
+  COMPRESSION_ENABLED: "true"
+  CACHE_TTL: "300"
+  LOG_FORMAT: "json"
+  LOG_ROTATION: "daily"
+  LOG_RETENTION: "30"

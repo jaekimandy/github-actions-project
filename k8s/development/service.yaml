@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops-demo-service
+  namespace: development
+  labels:
+    app: devops-demo
+    environment: development
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: devops-demo
+  sessionAffinity: None

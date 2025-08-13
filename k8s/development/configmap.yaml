@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devops-demo-config
+  namespace: development
+  labels:
+    app: devops-demo
+    environment: development
+data:
+  FLASK_ENV: "development"
+  LOG_LEVEL: "INFO"
+  CACHE_TYPE: "simple"
+  DATABASE_URL: "sqlite:///dev.db"
+  REDIS_URL: "redis://localhost:6379"
+  METRICS_ENABLED: "true"
+  HEALTH_CHECK_INTERVAL: "30"
+  API_RATE_LIMIT: "100"
+  CORS_ORIGINS: "*"
+  SECURITY_HEADERS_ENABLED: "true"
