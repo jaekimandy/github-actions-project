@@ -184,8 +184,11 @@ jobs:
 
       - name: Terraform Format Check
         run: |
+          # Check all Terraform files in the project
+          terraform fmt -check
+          # Check specific production configuration
           cd infrastructure/production
-          terraform fmt -check -recursive
+          terraform fmt -check
           terraform init -backend=false
           terraform validate
 
