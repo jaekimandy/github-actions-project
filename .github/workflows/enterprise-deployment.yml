@@ -205,29 +205,19 @@ jobs:
           helm lint k8s/production/
           helm template devops-demo k8s/production/ --values k8s/production/values.yaml
 
-      - name: Install kubeval
+      - name: Install kubeconform
         run: |
-          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
-          tar xf kubeval-linux-amd64.tar.gz
-          sudo cp kubeval /usr/local/bin
-
-      - name: Download Kubernetes Schemas
-        run: |
-          echo "Downloading Kubernetes schemas for validation..."
-          mkdir -p schemas
-          # Download core schemas
-          wget -O schemas/v1.28.0-standalone-strict.tar.gz https://github.com/yannh/kubernetes-json-schema/archive/refs/tags/v1.28.0-standalone-strict.tar.gz
-          tar -xzf schemas/v1.28.0-standalone-strict.tar.gz -C schemas/
-          mv schemas/kubernetes-json-schema-1.28.0-standalone-strict schemas/kubernetes
-          echo "Schemas downloaded successfully"
+          wget https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
+          tar xf kubeconform-linux-amd64.tar.gz
+          sudo cp kubeconform /usr/local/bin
 
       - name: Kubernetes Manifest Validation
         run: |
           echo "Validating Kubernetes manifests..."
-          # Validate development manifests with local schemas
-          kubeval --schema-location schemas/kubernetes k8s/development/*.yaml
-          # Validate production manifests with local schemas
-          kubeval --schema-location schemas/kubernetes k8s/production/*.yaml
+          # Validate development manifests
+          kubeconform -strict -summary k8s/development/*.yaml
+          # Validate production manifests
+          kubeconform -strict -summary k8s/production/*.yaml
           echo "Kubernetes manifest validation completed"
 
       - name: Create Infrastructure Report
