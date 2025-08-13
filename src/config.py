@@ -4,7 +4,7 @@ This module handles environment-specific configuration and secrets management
 """
 
 import os
-from typing import Optional
+from typing import Optional, Type
 
 
 class Config:
@@ -124,7 +124,7 @@ config = {
 }
 
 
-def get_config(config_name: Optional[str] = None) -> Config:
+def get_config(config_name: Optional[str] = None) -> Type[Config]:
     """Get configuration class based on environment"""
     if config_name is None:
         config_name = os.environ.get('FLASK_ENV', 'development')
