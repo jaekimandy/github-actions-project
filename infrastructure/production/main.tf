@@ -262,7 +262,7 @@ module "elasticache" {
   parameter_group_name = "default.redis7"
   port                 = 6379
 
-  subnet_ids        = module.vpc.private_subnets
+  subnet_ids         = module.vpc.private_subnets
   security_group_ids = [aws_security_group.redis.id]
 
   # Multi-AZ
