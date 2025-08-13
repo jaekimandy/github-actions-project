@@ -211,13 +211,23 @@ jobs:
           tar xf kubeval-linux-amd64.tar.gz
           sudo cp kubeval /usr/local/bin
 
+      - name: Download Kubernetes Schemas
+        run: |
+          echo "Downloading Kubernetes schemas for validation..."
+          mkdir -p schemas
+          # Download core schemas
+          wget -O schemas/v1.28.0-standalone-strict.tar.gz https://github.com/yannh/kubernetes-json-schema/archive/refs/tags/v1.28.0-standalone-strict.tar.gz
+          tar -xzf schemas/v1.28.0-standalone-strict.tar.gz -C schemas/
+          mv schemas/kubernetes-json-schema-1.28.0-standalone-strict schemas/kubernetes
+          echo "Schemas downloaded successfully"
+
       - name: Kubernetes Manifest Validation
         run: |
           echo "Validating Kubernetes manifests..."
-          # Validate development manifests
-          kubeval k8s/development/*.yaml
-          # Validate production manifests
-          kubeval k8s/production/*.yaml
+          # Validate development manifests with local schemas
+          kubeval --schema-location schemas/kubernetes k8s/development/*.yaml
+          # Validate production manifests with local schemas
+          kubeval --schema-location schemas/kubernetes k8s/production/*.yaml
           echo "Kubernetes manifest validation completed"
 
       - name: Create Infrastructure Report
