@@ -101,16 +101,6 @@ module "vpc" {
   create_flow_log_cloudwatch_iam_role  = true
 
   # Security Groups
-  enable_vpc_endpoints = true
-
-  vpc_endpoint_services = [
-    "ec2",
-    "ec2messages",
-    "ssm",
-    "ssmmessages",
-    "logs",
-    "monitoring"
-  ]
 
   tags = {
     Environment = var.environment
@@ -272,8 +262,8 @@ module "elasticache" {
   parameter_group_name = "default.redis7"
   port                 = 6379
 
-  subnet_ids             = module.vpc.private_subnets
-  vpc_security_group_ids = [aws_security_group.redis.id]
+  subnet_ids        = module.vpc.private_subnets
+  security_group_ids = [aws_security_group.redis.id]
 
   # Multi-AZ
   automatic_failover_enabled = true
@@ -500,6 +490,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "app_logs" {
     id     = "log_rotation"
     status = "Enabled"
 
+    filter {
+      prefix = "logs/"
+    }
+
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
@@ -523,53 +517,125 @@ resource "random_string" "bucket_suffix" {
   upper   = false
 }
 
-# Outputs
-output "cluster_endpoint" {
-  description = "Endpoint for EKS control plane"
-  value       = module.eks.cluster_endpoint
+
+
+# VPC Endpoints
+resource "aws_vpc_endpoint" "ec2" {
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.ec2"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = module.vpc.private_subnets
+
+  private_dns_enabled = true
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name        = "${var.project_name}-ec2-endpoint"
+    Environment = var.environment
+    Project     = var.project_name
+  }
 }
 
-output "cluster_security_group_id" {
-  description = "Security group ID attached to the EKS cluster"
-  value       = module.eks.cluster_security_group_id
+resource "aws_vpc_endpoint" "ec2messages" {
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.ec2messages"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = module.vpc.private_subnets
+
+  private_dns_enabled = true
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name        = "${var.project_name}-ec2messages-endpoint"
+    Environment = var.environment
+    Project     = var.project_name
+  }
 }
 
-output "cluster_iam_role_name" {
-  description = "IAM role name associated with EKS cluster"
-  value       = module.eks.cluster_iam_role_name
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.ssm"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = module.vpc.private_subnets
+
+  private_dns_enabled = true
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name        = "${var.project_name}-ssm-endpoint"
+    Environment = var.environment
+    Project     = var.project_name
+  }
 }
 
-output "cluster_certificate_authority_data" {
-  description = "Base64 encoded certificate data required to communicate with the cluster"
-  value       = module.eks.cluster_certificate_authority_data
+resource "aws_vpc_endpoint" "ssmmessages" {
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.ssmmessages"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = module.vpc.private_subnets
+
+  private_dns_enabled = true
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name        = "${var.project_name}-ssmmessages-endpoint"
+    Environment = var.environment
+    Project     = var.project_name
+  }
 }
 
-output "vpc_id" {
-  description = "VPC ID"
-  value       = module.vpc.vpc_id
+resource "aws_vpc_endpoint" "logs" {
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.logs"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = module.vpc.private_subnets
+
+  private_dns_enabled = true
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name        = "${var.project_name}-logs-endpoint"
+    Environment = var.environment
+    Project     = var.project_name
+  }
 }
 
-output "private_subnets" {
-  description = "List of IDs of private subnets"
-  value       = module.vpc.private_subnets
+resource "aws_vpc_endpoint" "monitoring" {
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.monitoring"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = module.vpc.private_subnets
+
+  private_dns_enabled = true
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name        = "${var.project_name}-monitoring-endpoint"
+    Environment = var.environment
+    Project     = var.project_name
+  }
 }
 
-output "public_subnets" {
-  description = "List of IDs of public subnets"
-  value       = module.vpc.public_subnets
-}
+# VPC Endpoints Security Group
+resource "aws_security_group" "vpc_endpoints" {
+  name_prefix = "${var.project_name}-vpc-endpoints-"
+  vpc_id      = module.vpc.vpc_id
 
-output "database_endpoint" {
-  description = "RDS instance endpoint"
-  value       = module.rds.db_instance_endpoint
-}
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [module.eks.cluster_security_group_id]
+  }
 
-output "redis_endpoint" {
-  description = "ElastiCache Redis endpoint"
-  value       = module.elasticache.elasticache_replication_group_primary_endpoint_address
-}
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
-output "alb_dns_name" {
-  description = "Application Load Balancer DNS name"
-  value       = module.alb.lb_dns_name
+  tags = {
+    Name = "${var.project_name}-vpc-endpoints-sg"
+  }
 }
