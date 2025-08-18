@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy dependency files
-COPY requirements.txt requirements-lock.txt ./
+COPY requirements.txt ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --user -r requirements.txt
@@ -64,7 +64,7 @@ COPY --chown=appuser:appuser scripts/ ./scripts/
 
 # Set Python path
 ENV PATH="/home/appuser/.local/bin:$PATH"
-ENV PYTHONPATH="/app/src:$PYTHONPATH"
+ENV PYTHONPATH="/app/src"
 
 # Switch to non-root user
 USER appuser
@@ -112,7 +112,7 @@ COPY --chown=appuser:appuser tests/ ./tests/
 
 # Set Python path
 ENV PATH="/home/appuser/.local/bin:$PATH"
-ENV PYTHONPATH="/app/src:/app/tests:$PYTHONPATH"
+ENV PYTHONPATH="/app/src:/app/tests"
 
 # Switch to non-root user
 USER appuser
@@ -153,7 +153,7 @@ COPY --chown=appuser:appuser tests/ ./tests/
 
 # Set Python path
 ENV PATH="/home/appuser/.local/bin:$PATH"
-ENV PYTHONPATH="/app/src:/app/tests:$PYTHONPATH"
+ENV PYTHONPATH="/app/src:/app/tests"
 
 # Switch to non-root user
 USER appuser
