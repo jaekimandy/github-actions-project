@@ -28,7 +28,7 @@ ipython>=8.17.0,<9.0.0
 
 # Performance & Profiling
 memory-profiler>=0.61.0,<1.0.0
-line-profiler>=4.1.0,<1.0.0
+line-profiler>=4.1.0,<6.0.0
 
 # Database Testing
 pytest-postgresql>=6.0.0,<7.0.0
