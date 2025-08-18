@@ -3,7 +3,7 @@
 # - Multi-stage builds for security and size optimization
 # - Non-root user for security
 # - Multi-platform support
-# - Layer caching optimization
+# - Layer caching optimization with BuildKit cache mounts
 # - Security scanning integration
 # - GitHub Actions CI/CD optimized
 #
@@ -20,7 +20,8 @@
 # GitHub Actions optimization:
 # - Heavy packages (Jupyter, Sphinx) removed from dev requirements
 # - Core development tools only for faster CI/CD builds
-# - Optimized pip caching and layer ordering for faster builds
+# - BuildKit cache mounts for persistent pip and apt caching
+# - Optimized layer ordering for faster builds
 
 # Build stage for dependencies
 FROM python:3.11-slim AS builder
@@ -31,8 +32,10 @@ ARG TARGETPLATFORM
 ARG BUILD_DATE
 ARG VCS_REF
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
+# Install build dependencies with BuildKit cache mount
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     gcc \
     g++ \
     make \
@@ -48,8 +51,9 @@ COPY pip.conf /etc/pip.conf
 COPY requirements.txt ./
 COPY requirements-dev.txt ./
 
-# Install Python dependencies with optimized pip settings
-RUN pip install --cache-dir /tmp/pip-cache \
+# Install Python dependencies with BuildKit pip cache mount
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    pip install \
     --timeout 300 \
     --retries 3 \
     -r requirements.txt
@@ -66,8 +70,10 @@ LABEL org.opencontainers.image.title="DevOps Demo Application"
 LABEL org.opencontainers.image.description="Demonstration of advanced DevOps practices"
 LABEL org.opencontainers.image.source="https://github.com/example/devops-demo"
 
-# Install runtime dependencies (GCC not needed for runtime)
-RUN apt-get update && apt-get install -y \
+# Install runtime dependencies with BuildKit cache mount
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
@@ -110,8 +116,10 @@ CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8000"]
 # Development stage
 FROM python:3.11-slim AS development
 
-# Install development dependencies (GCC needed for some dev packages)
-RUN apt-get update && apt-get install -y \
+# Install development dependencies with BuildKit cache mount
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     curl \
     git \
     vim \
@@ -132,8 +140,9 @@ COPY pip.conf /etc/pip.conf
 # Copy requirements first for better layer caching
 COPY requirements.txt requirements-dev.txt ./
 
-# Install development dependencies with optimized pip settings
-RUN pip install --cache-dir /tmp/pip-cache \
+# Install development dependencies with BuildKit pip cache mount
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    pip install \
     --timeout 300 \
     --retries 3 \
     -r requirements.txt -r requirements-dev.txt
@@ -161,8 +170,10 @@ CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8000", "--reload"
 # Testing stage
 FROM python:3.11-slim AS testing
 
-# Install testing dependencies (GCC needed for some test packages)
-RUN apt-get update && apt-get install -y \
+# Install testing dependencies with BuildKit cache mount
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     curl \
     gcc \
     g++ \
@@ -181,8 +192,9 @@ COPY pip.conf /etc/pip.conf
 # Copy requirements first for better layer caching
 COPY requirements.txt requirements-dev.txt ./
 
-# Install dependencies with optimized pip settings
-RUN pip install --cache-dir /tmp/pip-cache \
+# Install dependencies with BuildKit pip cache mount
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    pip install \
     --timeout 300 \
     --retries 3 \
     -r requirements.txt -r requirements-dev.txt
