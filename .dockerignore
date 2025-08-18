@@ -1,0 +1,89 @@
+# Git and version control
+.git
+.gitignore
+.github
+
+# Documentation
+README.md
+*.md
+
+# Development and testing
+.pytest_cache
+htmlcov
+.coverage
+.mypy_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Logs
+logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist
+build
+*.egg-info
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform
+.terraform.lock.hcl
+
+# Kubernetes
+*.yaml.bak
+*.yml.bak
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Scripts (keep only necessary ones)
+scripts/
+!scripts/build-and-test.sh
+!scripts/run_validation.bat

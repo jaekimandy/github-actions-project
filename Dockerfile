@@ -20,6 +20,7 @@
 # GitHub Actions optimization:
 # - Heavy packages (Jupyter, Sphinx) removed from dev requirements
 # - Core development tools only for faster CI/CD builds
+# - Optimized pip caching and layer ordering for faster builds
 
 # Build stage for dependencies
 FROM python:3.11-slim AS builder
@@ -40,11 +41,19 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files
-COPY requirements.txt ./
+# Copy pip configuration for optimized installations
+COPY pip.conf /etc/pip.conf
 
-# Install Python dependencies globally to avoid PATH warnings
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy dependency files first for better layer caching
+COPY requirements.txt ./
+COPY requirements-dev.txt ./
+
+# Install Python dependencies with optimized pip settings
+RUN pip install --cache-dir /tmp/pip-cache \
+    --timeout 300 \
+    --retries 3 \
+    --retries-delay 5 \
+    -r requirements.txt
 
 # Production stage
 FROM python:3.11-slim AS production
@@ -118,15 +127,18 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 # Set working directory
 WORKDIR /app
 
-# Copy requirements
-COPY requirements-dev.txt ./
+# Copy pip configuration for optimized installations
+COPY pip.conf /etc/pip.conf
 
-# Install development dependencies globally to avoid PATH warnings
-RUN pip install --no-cache-dir \
+# Copy requirements first for better layer caching
+COPY requirements.txt requirements-dev.txt ./
+
+# Install development dependencies with optimized pip settings
+RUN pip install --cache-dir /tmp/pip-cache \
     --timeout 300 \
     --retries 3 \
     --retries-delay 5 \
-    -r requirements-dev.txt
+    -r requirements.txt -r requirements-dev.txt
 
 # Copy source code
 COPY --chown=appuser:appuser src/ ./src/
@@ -165,11 +177,18 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 # Set working directory
 WORKDIR /app
 
-# Copy requirements
+# Copy pip configuration for optimized installations
+COPY pip.conf /etc/pip.conf
+
+# Copy requirements first for better layer caching
 COPY requirements.txt requirements-dev.txt ./
 
-# Install dependencies globally to avoid PATH warnings
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
+# Install dependencies with optimized pip settings
+RUN pip install --cache-dir /tmp/pip-cache \
+    --timeout 300 \
+    --retries 3 \
+    --retries-delay 5 \
+    -r requirements.txt -r requirements-dev.txt
 
 # Copy source code and tests
 COPY --chown=appuser:appuser src/ ./src/
