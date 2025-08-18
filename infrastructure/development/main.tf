@@ -23,7 +23,7 @@ terraform {
   backend "s3" {
     bucket         = "devops-demo-terraform-state"
     key            = "development/terraform.tfstate"
-    region         = "ap-northeast-2"  # Seoul, Korea
+    region         = "ap-northeast-2" # Seoul, Korea
     encrypt        = true
     dynamodb_table = "terraform-state-lock"
   }
@@ -89,7 +89,7 @@ module "vpc" {
   public_subnets  = var.public_subnet_cidrs
 
   enable_nat_gateway     = true
-  single_nat_gateway     = true  # Development: single NAT gateway to save costs
+  single_nat_gateway     = true # Development: single NAT gateway to save costs
   one_nat_gateway_per_az = false
 
   enable_dns_hostnames = true
@@ -137,7 +137,7 @@ module "eks" {
       min_size     = 1
       max_size     = 3
 
-      instance_types = ["t3.small", "t3.medium"]  # Development: smaller instances
+      instance_types = ["t3.small", "t3.medium"] # Development: smaller instances
       capacity_type  = "ON_DEMAND"
 
       labels = {
@@ -185,7 +185,7 @@ module "rds" {
 
   engine                = "postgres"
   engine_version        = "15.4"
-  instance_class        = "db.t3.micro"  # Development: micro instance
+  instance_class        = "db.t3.micro" # Development: micro instance
   allocated_storage     = 20
   max_allocated_storage = 50
 
@@ -197,7 +197,7 @@ module "rds" {
   subnet_ids             = module.vpc.private_subnets
 
   # Backup and maintenance
-  backup_retention_period = 3  # Development: shorter retention
+  backup_retention_period = 3 # Development: shorter retention
   backup_window           = "03:00-04:00"
   maintenance_window      = "sun:04:00-sun:05:00"
 
@@ -228,7 +228,7 @@ module "elasticache" {
 
   cluster_id           = "${var.project_name}-dev-redis"
   engine               = "redis"
-  node_type            = "cache.t3.micro"  # Development: micro instance
+  node_type            = "cache.t3.micro" # Development: micro instance
   num_cache_nodes      = 1
   parameter_group_name = "default.redis7"
   port                 = 6379
@@ -241,7 +241,7 @@ module "elasticache" {
   multi_az_enabled           = false
 
   # Backup
-  snapshot_retention_limit = 3  # Development: shorter retention
+  snapshot_retention_limit = 3 # Development: shorter retention
   snapshot_window          = "02:00-03:00"
 
   tags = {
@@ -323,7 +323,7 @@ resource "aws_iam_role_policy_attachment" "rds_monitoring" {
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "app" {
   name              = "/aws/eks/${var.project_name}-dev/application"
-  retention_in_days = 7  # Development: shorter retention
+  retention_in_days = 7 # Development: shorter retention
 
   tags = {
     Environment = var.environment
@@ -331,33 +331,4 @@ resource "aws_cloudwatch_log_group" "app" {
   }
 }
 
-# Outputs
-output "cluster_endpoint" {
-  description = "Endpoint for EKS control plane"
-  value       = module.eks.cluster_endpoint
-}
-
-output "cluster_name" {
-  description = "Name of the EKS cluster"
-  value       = module.eks.cluster_name
-}
-
-output "cluster_certificate_authority_data" {
-  description = "Base64 encoded certificate data required to communicate with the cluster"
-  value       = module.eks.cluster_certificate_authority_data
-}
-
-output "vpc_id" {
-  description = "VPC ID"
-  value       = module.vpc.vpc_id
-}
-
-output "private_subnets" {
-  description = "List of IDs of private subnets"
-  value       = module.vpc.private_subnets
-}
-
-output "public_subnets" {
-  description = "List of IDs of public subnets"
-  value       = module.vpc.public_subnets
-}
+# Outputs are defined in outputs.tf

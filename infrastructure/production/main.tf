@@ -23,7 +23,7 @@ terraform {
   backend "s3" {
     bucket         = "devops-demo-terraform-state"
     key            = "production/terraform.tfstate"
-    region         = "ap-northeast-2"  # Seoul, Korea
+    region         = "ap-northeast-2" # Seoul, Korea
     encrypt        = true
     dynamodb_table = "terraform-state-lock"
   }

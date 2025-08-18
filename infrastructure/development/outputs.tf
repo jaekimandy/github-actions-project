@@ -37,7 +37,7 @@ output "rds_endpoint" {
 
 output "redis_endpoint" {
   description = "ElastiCache Redis endpoint"
-  value       = module.elasticache.elasticache_replication_group_primary_endpoint_address
+  value       = module.elasticache.cluster_cache_nodes[0].address
 }
 
 output "kubeconfig_command" {
