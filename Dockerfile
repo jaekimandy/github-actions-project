@@ -87,11 +87,14 @@ CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8000"]
 # Development stage
 FROM python:3.11-slim as development
 
-# Install development dependencies
+# Install development dependencies including build tools for C++ extensions
 RUN apt-get update && apt-get install -y \
     curl \
     git \
     vim \
+    gcc \
+    g++ \
+    make \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -130,9 +133,12 @@ CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8000", "--reload"
 # Testing stage
 FROM python:3.11-slim as testing
 
-# Install testing dependencies
+# Install testing dependencies including build tools for C++ extensions
 RUN apt-get update && apt-get install -y \
     curl \
+    gcc \
+    g++ \
+    make \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
