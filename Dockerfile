@@ -22,7 +22,7 @@
 # - Core development tools only for faster CI/CD builds
 
 # Build stage for dependencies
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Set build arguments
 ARG BUILDPLATFORM
@@ -47,7 +47,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
-FROM python:3.11-slim as production
+FROM python:3.11-slim AS production
 
 # Set metadata labels
 LABEL maintainer="DevOps Team <devops@example.com>"
@@ -58,7 +58,7 @@ LABEL org.opencontainers.image.title="DevOps Demo Application"
 LABEL org.opencontainers.image.description="Demonstration of advanced DevOps practices"
 LABEL org.opencontainers.image.source="https://github.com/example/devops-demo"
 
-# Install runtime dependencies
+# Install runtime dependencies (GCC not needed for runtime)
 RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/* \
@@ -100,9 +100,9 @@ ENV FLASK_ENV=production
 CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8000"]
 
 # Development stage
-FROM python:3.11-slim as development
+FROM python:3.11-slim AS development
 
-# Install development dependencies including build tools for C++ extensions
+# Install development dependencies (GCC needed for some dev packages)
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -150,9 +150,9 @@ ENV FLASK_ENV=development
 CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8000", "--reload"]
 
 # Testing stage
-FROM python:3.11-slim as testing
+FROM python:3.11-slim AS testing
 
-# Install testing dependencies including build tools for C++ extensions
+# Install testing dependencies (GCC needed for some test packages)
 RUN apt-get update && apt-get install -y \
     curl \
     gcc \
