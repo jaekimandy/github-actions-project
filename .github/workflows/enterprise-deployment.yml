@@ -4,22 +4,22 @@ name: Enterprise DevOps Pipeline
 
 on:
   push:
-    branches: [ main, develop, feature/* ]
+    branches: [main, develop, feature/*]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy to'
+        description: "Environment to deploy to"
         required: true
-        default: 'development'
+        default: "development"
         type: choice
         options:
-        - development
-        - staging
-        - production
+          - development
+          - staging
+          - production
       force_deploy:
-        description: 'Force deployment even if tests fail'
+        description: "Force deployment even if tests fail"
         required: false
         default: false
         type: boolean
@@ -29,13 +29,14 @@ env:
   APP_NAME: "devops-demo"
   IMAGE_NAME: "devops-demo"
   REGISTRY: "ghcr.io"
-  
+  FULL_IMAGE_NAME: "ghcr.io/${{ github.repository_owner }}/devops-demo"
+
   # Version information
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "18"
   TERRAFORM_VERSION: "1.5.0"
   HELM_VERSION: "3.12.0"
-  
+
   # Build configuration
   BUILD_PLATFORMS: "linux/amd64,linux/arm64"
   CACHE_FROM: "type=gha"
@@ -47,6 +48,7 @@ permissions:
   packages: write
   security-events: write
   actions: read
+  id-token: write
 
 # Job dependencies and workflow
 jobs:
@@ -224,20 +226,20 @@ jobs:
         run: |
           cat > infrastructure-report.md << EOF
           # Infrastructure Validation Report
-          
+
           ## Validation Results
           - ✅ Terraform format check: Passed
           - ✅ Terraform validation: Passed
           - ⚠️  Terraform plan: Skipped (AWS credentials required)
           - ✅ Helm lint: Passed
           - ✅ Kubernetes manifests: Valid
-          
+
           ## Next Steps
           1. Set up AWS account and credentials
           2. Configure AWS provider in Terraform
           3. Run full terraform plan and apply
           4. Deploy infrastructure to AWS
-          
+
           ## AWS Resources Required
           - EKS Cluster
           - VPC and networking
@@ -246,7 +248,7 @@ jobs:
           - Application Load Balancer
           - S3 buckets for logs and state
           EOF
-          
+
           echo "Infrastructure report generated"
 
   # Container Build and Security
@@ -270,12 +272,23 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+          logout: true
+
+      - name: Debug registry information
+        run: |
+          echo "Registry: ${{ env.REGISTRY }}"
+          echo "Repository Owner: ${{ github.repository_owner }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -299,6 +312,7 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: true
           sbom: true
+          outputs: type=image,compression=gzip
 
       - name: Get image tags for scanning
         id: image-tags
@@ -358,10 +372,10 @@ jobs:
           # This step is for demonstration - replace with your actual cluster config
           echo "Setting up kubectl for development environment"
           echo "Note: Replace this with your actual cluster configuration"
-          
+
           # For local development (Docker Desktop, Minikube, Kind)
           # kubectl config use-context your-local-context
-          
+
           # For remote non-AWS cluster
           # echo "${{ secrets.DEV_KUBECONFIG }}" > $HOME/.kube/config
           # chmod 600 $HOME/.kube/config
@@ -369,39 +383,39 @@ jobs:
       - name: Deploy to development
         run: |
           echo "Deploying to development environment..."
-          
+
           # Create namespace if it doesn't exist
           kubectl apply -f k8s/development/namespace.yaml || true
-          
+
           # Apply ConfigMap
           kubectl apply -f k8s/development/configmap.yaml
-          
+
           # Apply deployment
           kubectl apply -f k8s/development/deployment.yaml
-          
+
           # Apply service
           kubectl apply -f k8s/development/service.yaml
-          
+
           # Update image if deployment exists
           if kubectl get deployment devops-demo-app -n development >/dev/null 2>&1; then
             kubectl set image deployment/devops-demo-app app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -n development
           fi
-          
+
           # Wait for deployment to be ready
           kubectl rollout status deployment/devops-demo-app -n development --timeout=300s
 
       - name: Run integration tests
         run: |
           echo "Running integration tests..."
-          
+
           # Wait for deployment to be ready
           kubectl wait --for=condition=ready pod -l app=devops-demo -n development --timeout=300s
-          
+
           # Test health endpoint
           # Note: This requires the service to be accessible
           # For local testing, you might need to port-forward
           echo "Testing application health..."
-          
+
           # Test from within the cluster
           kubectl run test-client --rm -i --restart=Never --image=curlimages/curl -- curl -f http://devops-demo-service.development.svc.cluster.local:8000/health || {
             echo "Direct service test failed - this is normal for local development"
@@ -413,27 +427,27 @@ jobs:
         run: |
           cat > deployment-report.md << EOF
           # Development Deployment Report
-          
+
           ## Deployment Information
           - **Environment**: Development
           - **Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           - **Deployment Time**: $(date)
-          
+
           ## Status
           - ✅ Deployment: Completed
           - ✅ Service: Created
           - ✅ Pods: Running
-          
+
           ## Access Information
           - **Service**: devops-demo-service.development.svc.cluster.local:8000
           - **Local Access**: kubectl port-forward -n development service/devops-demo-service 8000:8000
-          
+
           ## Next Steps
           1. Test application endpoints
           2. Monitor logs: kubectl logs -n development -l app=devops-demo -f
           3. Check metrics: kubectl port-forward and visit /metrics
           EOF
-          
+
           echo "Deployment report generated"
 
   # Deployment to Production Environment (AWS-dependent)
@@ -461,7 +475,7 @@ jobs:
           echo "2. Deploy infrastructure using Terraform"
           echo "3. Configure kubectl for EKS cluster"
           echo "4. Uncomment and configure production deployment steps"
-          
+
           # Production deployment steps (commented out until AWS is available)
           # kubectl apply -f k8s/production/
           # kubectl set image deployment/devops-demo-app app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -n production
@@ -471,35 +485,35 @@ jobs:
         run: |
           cat > production-deployment-guide.md << EOF
           # Production Deployment Guide
-          
+
           ## Prerequisites
           - AWS account with appropriate permissions
           - Terraform infrastructure deployed
           - EKS cluster running
           - kubectl configured for EKS
-          
+
           ## Steps to Enable
           1. **Infrastructure Setup**
              - Run: cd infrastructure/production && terraform apply
              - Wait for EKS cluster to be ready
-          
+
           2. **Configure kubectl**
              - aws eks update-kubeconfig --region us-west-2 --name devops-demo-cluster
-          
+
           3. **Deploy Application**
              - kubectl apply -f k8s/production/
              - Update image: kubectl set image deployment/devops-demo-app app=IMAGE:TAG -n production
-          
+
           4. **Verify Deployment**
              - kubectl get pods -n production
              - kubectl logs -n production -l app=devops-demo
-          
+
           ## Current Status
           - ❌ AWS Infrastructure: Not deployed
           - ❌ EKS Cluster: Not available
           - ❌ Production Deployment: Disabled
           EOF
-          
+
           echo "Production deployment guide generated"
 
   # Post-deployment validation and monitoring
@@ -515,13 +529,13 @@ jobs:
         run: |
           cat > final-pipeline-report.md << EOF
           # DevOps Pipeline Final Report
-          
+
           ## Pipeline Status
           - **Trigger**: ${{ github.event_name }}
           - **Branch**: ${{ github.ref }}
           - **Commit**: ${{ github.sha }}
           - **Completion Time**: $(date)
-          
+
           ## Job Results
           - **Security Scan**: ${{ needs.security-scan.result }}
           - **Quality Gates**: ${{ needs.quality-gates.result }}
@@ -529,7 +543,7 @@ jobs:
           - **Container Build**: ${{ needs.container-build.result }}
           - **Development Deployment**: ${{ needs.deploy-development.result }}
           - **Production Deployment**: ${{ needs.deploy-production.result }}
-          
+
           ## Summary
           This pipeline demonstrates enterprise DevOps practices including:
           - Comprehensive security scanning (Trivy, OWASP ZAP, Snyk)
@@ -538,18 +552,18 @@ jobs:
           - Container security and vulnerability scanning
           - Multi-environment deployment
           - Monitoring and observability
-          
+
           ## Next Steps
           1. **For AWS Infrastructure**: Set up AWS account and run Terraform
           2. **For Local Development**: Use scripts/ scripts for testing
           3. **For Production**: Complete AWS setup and enable production deployment
-          
+
           ## Generated Reports
           - infrastructure-report.md: Infrastructure validation details
           - deployment-report.md: Development deployment status
           - production-deployment-guide.md: Production setup guide
           EOF
-          
+
           echo "Final pipeline report generated"
 
       - name: Upload pipeline artifacts
