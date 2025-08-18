@@ -43,8 +43,8 @@ WORKDIR /app
 # Copy dependency files
 COPY requirements.txt ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --user -r requirements.txt
+# Install Python dependencies globally to avoid PATH warnings
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Production stage
 FROM python:3.11-slim AS production
@@ -71,14 +71,14 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app
 
 # Copy Python packages from builder stage
-COPY --from=builder /root/.local /home/appuser/.local
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser scripts/ ./scripts/
 
 # Set Python path
-ENV PATH="/home/appuser/.local/bin:$PATH"
 ENV PYTHONPATH="/app/src"
 
 # Switch to non-root user
@@ -121,8 +121,8 @@ WORKDIR /app
 # Copy requirements
 COPY requirements-dev.txt ./
 
-# Install development dependencies
-RUN pip install --no-cache-dir --user \
+# Install development dependencies globally to avoid PATH warnings
+RUN pip install --no-cache-dir \
     --timeout 300 \
     --retries 3 \
     --retries-delay 5 \
@@ -133,7 +133,6 @@ COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser tests/ ./tests/
 
 # Set Python path
-ENV PATH="/home/appuser/.local/bin:$PATH"
 ENV PYTHONPATH="/app/src:/app/tests"
 
 # Switch to non-root user
@@ -169,15 +168,14 @@ WORKDIR /app
 # Copy requirements
 COPY requirements.txt requirements-dev.txt ./
 
-# Install dependencies
-RUN pip install --no-cache-dir --user -r requirements.txt -r requirements-dev.txt
+# Install dependencies globally to avoid PATH warnings
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
 
 # Copy source code and tests
 COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser tests/ ./tests/
 
 # Set Python path
-ENV PATH="/home/appuser/.local/bin:$PATH"
 ENV PYTHONPATH="/app/src:/app/tests"
 
 # Switch to non-root user
