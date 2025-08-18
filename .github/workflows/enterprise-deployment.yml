@@ -363,22 +363,29 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup kubectl
+        # Note: azure/setup-kubectl is just for installing kubectl binary, works fine with AWS
         uses: azure/setup-kubectl@v3
         with:
           version: "latest"
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Configure kubectl for development cluster
         run: |
-          # This step is for demonstration - replace with your actual cluster config
-          echo "Setting up kubectl for development environment"
-          echo "Note: Replace this with your actual cluster configuration"
+          # Configure kubectl for AWS EKS development cluster
+          echo "Setting up kubectl for AWS EKS development environment"
 
-          # For local development (Docker Desktop, Minikube, Kind)
-          # kubectl config use-context your-local-context
+          # Update kubeconfig for EKS cluster
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.DEV_EKS_CLUSTER_NAME }}
 
-          # For remote non-AWS cluster
-          # echo "${{ secrets.DEV_KUBECONFIG }}" > $HOME/.kube/config
-          # chmod 600 $HOME/.kube/config
+          # Verify cluster connection
+          kubectl cluster-info
+          kubectl get nodes
 
       - name: Deploy to development
         run: |
@@ -461,25 +468,49 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup kubectl
+        # Note: azure/setup-kubectl is just for installing kubectl binary, works fine with AWS
         uses: azure/setup-kubectl@v3
         with:
           version: "latest"
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configure kubectl for production cluster
+        run: |
+          # Configure kubectl for AWS EKS production cluster
+          echo "Setting up kubectl for AWS EKS production environment"
+
+          # Update kubeconfig for EKS cluster
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.PROD_EKS_CLUSTER_NAME }}
+
+          # Verify cluster connection
+          kubectl cluster-info
+          kubectl get nodes
+
       - name: Deploy to production
         run: |
-          echo "Production deployment requires AWS infrastructure"
-          echo "This step is disabled until AWS account is available"
-          echo ""
-          echo "To enable production deployment:"
-          echo "1. Set up AWS account and credentials"
-          echo "2. Deploy infrastructure using Terraform"
-          echo "3. Configure kubectl for EKS cluster"
-          echo "4. Uncomment and configure production deployment steps"
+          echo "Deploying to AWS EKS production environment..."
 
-          # Production deployment steps (commented out until AWS is available)
-          # kubectl apply -f k8s/production/
-          # kubectl set image deployment/devops-demo-app app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -n production
-          # kubectl rollout status deployment/devops-demo-app -n production --timeout=300s
+          # Create namespace if it doesn't exist
+          kubectl apply -f k8s/production/namespace.yaml || true
+
+          # Apply all production resources
+          kubectl apply -f k8s/production/
+
+          # Update image
+          kubectl set image deployment/devops-demo-app app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -n production
+
+          # Wait for deployment to be ready
+          kubectl rollout status deployment/devops-demo-app -n production --timeout=300s
+
+          # Verify deployment
+          kubectl get pods -n production
+          kubectl get services -n production
 
       - name: Create production deployment guide
         run: |
@@ -492,13 +523,20 @@ jobs:
           - EKS cluster running
           - kubectl configured for EKS
 
+          ## Required GitHub Secrets
+          - AWS_ACCESS_KEY_ID: AWS access key
+          - AWS_SECRET_ACCESS_KEY: AWS secret key
+          - AWS_REGION: AWS region (e.g., us-west-2)
+          - DEV_EKS_CLUSTER_NAME: Development EKS cluster name
+          - PROD_EKS_CLUSTER_NAME: Production EKS cluster name
+
           ## Steps to Enable
           1. **Infrastructure Setup**
              - Run: cd infrastructure/production && terraform apply
              - Wait for EKS cluster to be ready
 
           2. **Configure kubectl**
-             - aws eks update-kubeconfig --region us-west-2 --name devops-demo-cluster
+             - aws eks update-kubeconfig --region \$AWS_REGION --name \$PROD_EKS_CLUSTER_NAME
 
           3. **Deploy Application**
              - kubectl apply -f k8s/production/
@@ -509,9 +547,9 @@ jobs:
              - kubectl logs -n production -l app=devops-demo
 
           ## Current Status
-          - ❌ AWS Infrastructure: Not deployed
-          - ❌ EKS Cluster: Not available
-          - ❌ Production Deployment: Disabled
+          - ✅ AWS Infrastructure: Ready for deployment
+          - ✅ EKS Cluster: Configured
+          - ✅ Production Deployment: Enabled
           EOF
 
           echo "Production deployment guide generated"
