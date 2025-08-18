@@ -5,6 +5,21 @@
 # - Multi-platform support
 # - Layer caching optimization
 # - Security scanning integration
+# - GitHub Actions CI/CD optimized
+#
+# Build targets:
+# - production: Production-ready image with minimal dependencies
+# - development: Development environment optimized for GitHub Actions
+# - testing: Testing environment for CI/CD pipelines
+#
+# Build commands:
+# - docker build --target production -t app:prod .
+# - docker build --target development -t app:dev .
+# - docker build --target testing -t app:test .
+#
+# GitHub Actions optimization:
+# - Heavy packages (Jupyter, Sphinx) removed from dev requirements
+# - Core development tools only for faster CI/CD builds
 
 # Build stage for dependencies
 FROM python:3.11-slim as builder
@@ -107,7 +122,11 @@ WORKDIR /app
 COPY requirements-dev.txt ./
 
 # Install development dependencies
-RUN pip install --no-cache-dir --user -r requirements-dev.txt
+RUN pip install --no-cache-dir --user \
+    --timeout 300 \
+    --retries 3 \
+    --retries-delay 5 \
+    -r requirements-dev.txt
 
 # Copy source code
 COPY --chown=appuser:appuser src/ ./src/
