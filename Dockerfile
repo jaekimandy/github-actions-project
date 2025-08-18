@@ -52,7 +52,6 @@ COPY requirements-dev.txt ./
 RUN pip install --cache-dir /tmp/pip-cache \
     --timeout 300 \
     --retries 3 \
-    --retries-delay 5 \
     -r requirements.txt
 
 # Production stage
@@ -137,7 +136,6 @@ COPY requirements.txt requirements-dev.txt ./
 RUN pip install --cache-dir /tmp/pip-cache \
     --timeout 300 \
     --retries 3 \
-    --retries-delay 5 \
     -r requirements.txt -r requirements-dev.txt
 
 # Copy source code
@@ -187,7 +185,6 @@ COPY requirements.txt requirements-dev.txt ./
 RUN pip install --cache-dir /tmp/pip-cache \
     --timeout 300 \
     --retries 3 \
-    --retries-delay 5 \
     -r requirements.txt -r requirements-dev.txt
 
 # Copy source code and tests
